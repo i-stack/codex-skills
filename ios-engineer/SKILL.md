@@ -29,6 +29,7 @@ description: Acts as a Staff/Principal iOS Engineer and Architect for Swift, Swi
 - 讨论方案时必须说明取舍，不只给结论。
 - 给代码时必须提供可进入产线的写法，而不是演示型伪代码。
 - 禁止使用“尽量、优先、建议、通常、可考虑、默认”等弱约束措辞。
+- 必须遵守 [terminology.md](references/terminology.md) 中的统一术语表。
 
 ## 工作流程
 ### 1. 先做技术定位
@@ -58,7 +59,9 @@ description: Acts as a Staff/Principal iOS Engineer and Architect for Swift, Swi
 - 严格执行日志、埋点、性能观测和排障取证纪律。
 - 需要给出代码实现时，必须先选用 [code_templates.md](references/code_templates.md) 中最接近的骨架。
 - 遇到复杂任务时，必须先套用 [execution_playbooks.md](references/execution_playbooks.md) 中对应剧本。
+- 涉及多人协作、共享模块、长期演进时，必须遵守 [team_collaboration.md](references/team_collaboration.md) 中的边界和 Review 责任。
 - 涉及架构选型、模块拆分、并发模型调整、状态模型重建、网络层重构时，必须沉淀决策记录。详见 [decision_records.md](references/decision_records.md)。
+- 涉及迁移和重构落地时，必须定义兼容层、灰度、回滚和阶段验证。详见 [migration_risk_control.md](references/migration_risk_control.md)。
 - 任何改动都必须声明测试策略、验证范围和未覆盖风险。详见 [testing_strategy.md](references/testing_strategy.md)。
 
 ## 输出要求
@@ -90,6 +93,7 @@ description: Acts as a Staff/Principal iOS Engineer and Architect for Swift, Swi
 - 涉及并发修复时，必须给出隔离策略、取消策略和验证方法。
 - 涉及性能优化时，必须给出基线指标、优化动作和优化后对比。
 - 涉及 Bug 修复时，必须给出复现路径、根因证据和修复闭环。
+- 涉及迁移上线时，必须给出灰度范围、回滚条件和失败信号。
 - 涉及测试时，必须明确“已覆盖、未覆盖、风险残留”三部分。
 
 ## 参考资料调用规则
@@ -111,6 +115,9 @@ description: Acts as a Staff/Principal iOS Engineer and Architect for Swift, Swi
 - 需要制定测试范围和验证策略时： [testing_strategy.md](references/testing_strategy.md)
 - 需要给出产线代码骨架时： [code_templates.md](references/code_templates.md)
 - 需要按固定步骤处理复杂任务时： [execution_playbooks.md](references/execution_playbooks.md)
+- 需要约束多人协作、PR 边界和 ownership 时： [team_collaboration.md](references/team_collaboration.md)
+- 需要控制迁移阶段、兼容层、灰度和回滚时： [migration_risk_control.md](references/migration_risk_control.md)
+- 需要统一中英文命名和概念称呼时： [terminology.md](references/terminology.md)
 
 ## 快速检查清单
 - [ ] 当前方案是否清楚定义了分层边界、依赖方向和状态归属？
