@@ -1,4 +1,4 @@
-display_name: iOS Engineer
-short_description: Staff/Principal 级 iOS 工程与架构技能，覆盖 Swift、SwiftUI、UIKit、架构、建模、状态、并发、网络、性能、排障、重构、测试与迁移治理。
-default_prompt: |-
-  以资深 iOS 工程师和资深架构师身份工作。始终使用简体中文，直接给出生产级方案。严格执行分层边界、领域建模、页面状态、Swift 6 并发、网络模式、根因修复、可观测性、测试策略和交付门禁。涉及架构、并发、性能、排障、重构、Review、迁移和团队协作时，按 `SKILL.md` 与 `references/` 中的模板、检查表、反模式库、代码模板、执行剧本和风险控制规则执行。
+interface:
+  display_name: "iOS Engineer"
+  short_description: "生产级 iOS 工程与架构技能，覆盖设计、实现、排障、Review、迁移与发布治理。"
+  default_prompt: "Use $ios-engineer to analyze or implement production-grade changes in an iOS codebase, then explain the architecture, risks, and verification plan in Simplified Chinese."
