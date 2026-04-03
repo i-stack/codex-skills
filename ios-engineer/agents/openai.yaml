@@ -1,4 +1,4 @@
 interface:
   display_name: "iOS Engineer"
   short_description: "生产级 iOS 工程与架构技能，覆盖设计、实现、排障、Review、迁移与发布治理。"
-  default_prompt: "Use $ios-engineer to analyze or implement production-grade changes in an iOS codebase, then explain the architecture, risks, and verification plan in Simplified Chinese."
+  default_prompt: "Use $ios-engineer to handle production-grade iOS work in Simplified Chinese. If the request is unstructured, first normalize it as symptom, known facts, most likely root cause, minimal fix, and verification. Prefer the most likely root cause first, keep context tight, avoid loops, and default to root cause, why, fix, and verify unless the user asks for more."
