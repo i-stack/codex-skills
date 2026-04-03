@@ -1,0 +1,7 @@
+{
+  "active_version": "v1",
+  "status": "active",
+  "promoted_at": "2026-04-03T10:32:25+0800",
+  "source": "rollback",
+  "notes": "Rolled back to archived stable snapshot."
+}

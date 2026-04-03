@@ -4,7 +4,6 @@
 - 用本文件验证 `ios-engineer` skill 是否真正做到：少带上下文、先抓根因、避免大改、补齐链路、控制工具调用。
 - 每次验证只测 1 个场景，不把多个场景混在一轮。
 - 验证结论只回答四件事：是否命中、哪里偏了、为什么偏、规则怎么补。
-- 建议使用固定场景标识：`layout`、`parameter-pass-through`、`concurrency`、`review`、`migration`、`mcp-control`。
 
 ## 验证目标
 - 输出是否优先给出最可能根因，而不是铺开多个大分支。
@@ -126,23 +125,4 @@ review 这个改动，重点看有没有隐藏回归。
 改进建议
 - 应该补哪条规则
 - 应该删哪条重复规则
-```
-
-结构化记录建议字段：
-
-```text
-scenario
-- 固定场景标识
-
-result
-- pass / partial / fail
-
-hits
-- 命中的规则或行为
-
-deviations
-- 偏差点
-
-improvements
-- 改进建议
 ```

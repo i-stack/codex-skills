@@ -1,0 +1,42 @@
+{
+  "proposal_id": "20260403-100527-drill-scenario-record",
+  "proposal_file": "evolution/proposals/20260403-100527-drill-scenario-record.md",
+  "validated_at": "2026-04-03T10:15:47+0800",
+  "status": "validated",
+  "exit_code": 0,
+  "active_version": "v1",
+  "base_validation_output": "[1/4] Validate YAML structure\nYAML OK\n[2/4] Validate SKILL.md size\nSKILL.md lines: 92\n[3/4] Validate referenced files exist\nReference files OK\n[4/4] Validate layering guardrails\nLayering guardrails OK\nBase validation passed\n",
+  "scenario_validation_status": "passed",
+  "scenario_records": [
+    {
+      "scenario": "layout",
+      "result": "pass",
+      "hits": [
+        "命中四段式输出",
+        "先落到布局与复用链路"
+      ],
+      "deviations": [
+        "无"
+      ],
+      "improvements": [
+        "无"
+      ]
+    },
+    {
+      "scenario": "concurrency",
+      "result": "pass",
+      "hits": [
+        "命中取消链路检查",
+        "优先最小修复"
+      ],
+      "deviations": [
+        "无"
+      ],
+      "improvements": [
+        "无"
+      ]
+    }
+  ],
+  "updated_at": "2026-04-03T10:18:48+0800",
+  "promotion_readiness": "ready_to_promote"
+}

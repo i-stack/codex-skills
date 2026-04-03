@@ -1,0 +1,9 @@
+{
+  "proposal_id": "20260403-100328-drill-status-flow",
+  "proposal_file": "evolution/proposals/20260403-100328-drill-status-flow.md",
+  "validated_at": "2026-04-03T10:03:31+0800",
+  "status": "validated",
+  "exit_code": 0,
+  "active_version": "v1",
+  "output": "[1/4] Validate YAML structure\nYAML OK\n[2/4] Validate SKILL.md size\nSKILL.md lines: 92\n[3/4] Validate referenced files exist\nReference files OK\n[4/4] Validate layering guardrails\nLayering guardrails OK\nBase validation passed\n"
+}

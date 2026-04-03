@@ -1,0 +1,121 @@
+# Skill 自进化治理
+
+## 目录
+- 使用规则
+- 触发信号
+- 自进化闭环
+- 候选版约束
+- 自动验证门禁
+- 晋升与回滚
+- 明确禁止的模式
+- 提案模板
+
+## 使用规则
+- 只有在真实任务中发现当前 skill 存在规则缺失、规则冲突、规则重复、规则失效或输出失真时，才使用本文件。
+- 本文件定义的是 skill 的受控自进化流程，不是业务问题的答法模板。
+- 默认生成候选改动并验证，不直接把未验证的规则改动当作新的生效版本。
+- 版本状态保存在 `evolution/active_version.json`；提案、验证记录、授权记录、历史快照分别存放在 `evolution/proposals/`、`evolution/validations/`、`evolution/approvals/` 和 `evolution/history/`。
+
+## 触发信号
+以下信号满足任一条，就可以进入自进化流程：
+- 同类问题连续出现，而现有规则没有覆盖。
+- 现有规则可以覆盖，但表达不清，导致执行结果持续偏移。
+- 多份文档对同一件事重复下定义，导致上下文膨胀或优先级冲突。
+- 某条规则已经长期稳定命中，但仍在多个文档重复出现。
+- 某条规则在真实任务里持续带来误导、过度展开或错误约束。
+
+## 自进化闭环
+固定按以下顺序推进：
+
+1. 记录信号
+- 问题现象是什么。
+- 现有哪条规则没有命中，或命中了但方向不对。
+- 这是缺能力、缺表述，还是重复定义。
+
+2. 先判定变更类型
+- 新增能力：当前 skill 确实缺少某类稳定规则。
+- 修正表达：规则本身方向正确，但措辞或触发条件不清。
+- 合并重复：多份文档重复定义同一约束。
+- 退役规则：旧规则已经过时、误导或被新规则覆盖。
+
+3. 只生成候选版
+- 先改出候选版，而不是宣称“skill 已自动学会”。
+- 先使用 [scripts/create_skill_proposal.sh](../scripts/create_skill_proposal.sh) 生成提案骨架，再补全提案内容。
+- 候选改动必须同时写清：
+  - 改什么
+  - 为什么改
+  - 替代或合并哪条旧规则
+  - 预期解决哪类失真
+
+4. 运行验证
+- 至少执行结构校验、引用校验和场景校验。
+- 若候选改动影响输出结构、排障纪律或迁移门禁，必须补跑相关验证场景。
+- 使用 [scripts/validate_skill_proposal.sh](../scripts/validate_skill_proposal.sh) 为提案写入验证记录，并把提案状态推进到 `validated` 或 `rejected`。
+- 若已经回放具体场景，使用 [scripts/record_validation_scenario.sh](../scripts/record_validation_scenario.sh) 把 `通过 / 部分通过 / 不通过`、命中点、偏差点和改进建议写入同一份验证记录；当所有场景均完成且结果满足条件时，提案可自动进入 `ready_to_promote`。
+- 若提案已进入 `ready_to_promote`，使用 [scripts/check_skill_promotion_readiness.sh](../scripts/check_skill_promotion_readiness.sh) 查看提示，再使用 [scripts/approve_skill_promotion.sh](../scripts/approve_skill_promotion.sh) 记录授权并把提案推进到 `approved`。
+
+5. 通过后再晋升
+- 只有候选版通过验证，才作为新的 active 版本继续使用。
+- 验证不通过时，只允许继续修正候选版，不得直接覆盖 active 版。
+- `ready_to_promote` 可以自动判定，但不自动晋升。
+- `approved` 必须通过显式授权产生，不自动推进。
+- 晋升时使用 [scripts/promote_skill_evolution.sh](../scripts/promote_skill_evolution.sh) 归档当前稳定快照、更新 active 版本，并把提案状态推进到 `promoted`；该脚本要求提案状态已经是 `approved`。
+
+## 候选版约束
+- 每次提案优先做最小改动，不同时重写主 skill 和大量 reference。
+- 每次提案尽量只处理一个核心问题；若同时发现多个问题，先拆成多个候选改动。
+- 若新增一条规则，必须同时回答：它替代哪条旧规则，或为什么不能复用旧规则。
+- 若两次连续提案都只是在加规则而没有合并、收紧或退役旧规则，第三次必须先做瘦身检查。
+
+## 自动验证门禁
+候选版至少通过以下检查：
+- `SKILL.md` frontmatter 合法。
+- `agents/openai.yaml` 结构合法。
+- `SKILL.md` 中引用的 `references/` 文件存在。
+- 主 skill 仍保持分层，不把根因纪律、输出模板、工具预算重新混写。
+- 命中的验证场景没有回归。
+
+建议执行：
+- 运行 [scripts/validate_skill_evolution.sh](../scripts/validate_skill_evolution.sh) 做基础校验。
+- 运行 [scripts/update_skill_proposal_status.sh](../scripts/update_skill_proposal_status.sh) 维护提案状态；允许的状态只有 `draft`、`validated`、`ready_to_promote`、`approved`、`promoted`、`rejected`。
+- 按 [validation_scenarios.md](validation_scenarios.md) 选择受影响的场景做前向验证。
+- 运行 [scripts/record_validation_scenario.sh](../scripts/record_validation_scenario.sh) 追加结构化场景验证结论。
+- 运行 [scripts/check_skill_promotion_readiness.sh](../scripts/check_skill_promotion_readiness.sh) 查看是否已满足授权前置条件和推荐提示。
+- 运行 [scripts/approve_skill_promotion.sh](../scripts/approve_skill_promotion.sh) 记录显式授权。
+- 需要回退时，使用 [scripts/rollback_skill_evolution.sh](../scripts/rollback_skill_evolution.sh) 恢复已归档版本。
+
+## 晋升与回滚
+- 晋升原则：只有通过验证、处于 `ready_to_promote`、并已记录显式授权的候选版，才能在收到显式命令后成为新的 active 版。
+- 回滚原则：如果新规则导致输出更长、命中率下降、工具调用失控或与既有铁律冲突，应回退到上一个稳定版本。
+- 若当前任务只是在探索规则是否需要调整，可以先保留候选改动，不强制立即晋升。
+
+## 明确禁止的模式
+- 因一次偶发失误就新增永久规则。
+- 新增规则时不说明替代关系。
+- 用新增规则掩盖已有规则表达不清的问题。
+- 没跑验证就宣布 skill 已学会。
+- 连续扩容规则而不做瘦身、合并或退役。
+
+## 提案模板
+需要做自进化时，优先按以下模板组织变更：
+
+```text
+问题信号
+- 真实任务里出现了什么偏差
+
+变更类型
+- 新增能力 / 修正表达 / 合并重复 / 退役规则
+
+变更内容
+- 修改哪些文件
+- 替代或合并哪条旧规则
+
+预期收益
+- 会减少什么失真
+- 会减少什么上下文浪费
+
+验证
+- 跑了哪些结构检查
+- 回放了哪些验证场景
+- 还有哪些残留风险
+```
