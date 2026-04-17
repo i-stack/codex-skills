@@ -3,5 +3,11 @@
   "status": "active",
   "promoted_at": "2026-04-03T10:32:25+0800",
   "source": "rollback",
-  "notes": "Rolled back to archived stable snapshot."
+  "notes": "Rolled back to archived stable snapshot.",
+  "last_evolution": {
+    "proposal_id": "20260414-163233-tableview-pin-to-top-on-send",
+    "applied_at": "2026-04-14",
+    "changed_files": ["references/layout_and_ui.md"],
+    "summary": "Added UITableView pin-to-top-on-send pattern to layout_and_ui.md"
+  }
 }

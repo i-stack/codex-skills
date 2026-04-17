@@ -75,6 +75,7 @@ description: Production-grade iOS engineering skill for Swift, SwiftUI, UIKit, m
 - 控制嵌套深度：优先使用 `guard` 做前置条件早退出，避免多层 `if` / `switch` 嵌套。
 - 固定代码结构顺序：`typealias/enum` -> 初始化 -> public API -> private helpers；协议实现放在对应 `extension` 中分组。
 - 命名保持一致：Bool 以 `is/has/can` 前缀；避免含糊缩写；异步/并发相关方法用清晰动词短语表达意图。
+- 禁止使用 `Snapshot`、`快照` 及同类命名，统一采用更贴近业务语义的名称。
 - 并发边界写清楚：UI 更新策略统一（例如 `@MainActor` 或明确切主线程），避免同一模块混用多种写法导致边界不清。
 - 严格执行网络边界、缓存、重试、鉴权、错误分层和幂等语义。
 - 严格补齐日志、埋点、性能观测和排障取证链路。

@@ -1,0 +1,12 @@
+{
+  "proposal_id": "20260414-163233-tableview-pin-to-top-on-send",
+  "proposal_file": "evolution/proposals/20260414-163233-tableview-pin-to-top-on-send.md",
+  "validated_at": "2026-04-14T16:34:55+0800",
+  "status": "validated",
+  "exit_code": 0,
+  "active_version": "v1",
+  "base_validation_output": "[1/4] Validate YAML structure\nYAML OK\n[2/4] Validate SKILL.md size\nSKILL.md lines: 101\n[3/4] Validate referenced files exist\nscripts/validate_skill_evolution.sh: line 27: rg: command not found\nReference files OK\n[4/4] Validate layering guardrails\nscripts/validate_skill_evolution.sh: line 35: rg: command not found\nscripts/validate_skill_evolution.sh: line 40: rg: command not found\nLayering guardrails OK\nBase validation passed\n",
+  "promotion_readiness": "not_ready",
+  "scenario_validation_status": "not_run",
+  "scenario_records": []
+}
