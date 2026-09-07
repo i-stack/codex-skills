@@ -1,7 +1,6 @@
 {
     "name": "lanhu",
     "type": "stdio",
-	"enabled": false,
     "command": "/bin/bash",
     "args": [
         "-c",
