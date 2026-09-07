@@ -204,19 +204,53 @@ describe("PlanReviewsKB search", () => {
 			title: "登录接口限流提问优化",
 			question: "帮我优化提问：登录接口要加限流，别让人暴力破解。",
 			clarification: "确认是服务端限流，面向 API 登录接口，产出实现方案与关键代码。",
-			optimized: "请为登录接口实现服务端请求频率限制，防止暴力破解，需要给出实现方案与关键代码。",
+			optimized:
+				"请为登录接口实现服务端请求频率限制。\n\n" +
+				"## 目标\n为登录接口增加服务端限流。\n\n" +
+				"## 上下文\n面向 API 登录接口，防止暴力破解。\n\n" +
+				"## 具体要求\n给出实现方案与关键代码。\n\n" +
+				"## 期望输出\n可落地的限流实现。",
 		});
 
 		const [artifact] = scanPlansDir(root);
 		expect(artifact.kind).toBe("prompt-optimization");
 		expect(artifact.sections.goal).toContain("登录接口要加限流");
-		expect(artifact.sections.approach).toContain("服务端请求频率限制");
+		// Structured prompt keeps its own H2 sub-headings (regression for P1 truncation).
+		expect(artifact.sections.approach).toContain("## 目标");
+		expect(artifact.sections.approach).toContain("为登录接口增加服务端限流");
+		expect(artifact.sections.approach).toContain("## 期望输出");
+		expect(artifact.sections.approach).toContain("可落地的限流实现");
 
 		const kb = await PlanReviewsKB.init({ projectRoot: root, embeddingApiKey: "" });
 		await kb.sync();
 		const block = await kb.recall("登录接口限流");
 		expect(block).toContain("服务端请求频率限制");
 		expect(optDir).toContain("prompt-opt-example");
+	});
+
+	it("keeps repeated same-day archives with numeric suffixes without clobbering", async () => {
+		const root = makeTempProject();
+		writePromptOptimization(root, "2026-09-07-login-limit", {
+			title: "登录限流（首次）",
+			question: "登录接口要加限流。",
+			clarification: "服务端限流。",
+			optimized: "为登录接口实现服务端请求频率限制。",
+		});
+		writePromptOptimization(root, "2026-09-07-login-limit-2", {
+			title: "登录限流（重试）",
+			question: "登录接口要加限流，防止爆破。",
+			clarification: "按 IP 与账号双维度限流。",
+			optimized: "实现 IP 与账号双维度频率限制与封禁策略。",
+		});
+
+		const artifacts = scanPlansDir(root).filter((a) => a.kind === "prompt-optimization");
+		expect(artifacts).toHaveLength(2);
+
+		const kb = await PlanReviewsKB.init({ projectRoot: root, embeddingApiKey: "" });
+		await kb.sync();
+		const block = await kb.recall("登录接口限流");
+		expect(block).toContain("服务端请求频率限制");
+		expect(block).toContain("双维度");
 	});
 
 	it("re-indexes code-review artifacts when RESPONSE.md changes", async () => {

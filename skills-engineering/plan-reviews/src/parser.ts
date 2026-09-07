@@ -372,9 +372,7 @@ function parsePromptOptimization(
 		const titleMatch = content.match(/^#\s+(.+?)\s*$/m);
 		const title = titleMatch ? titleMatch[1].trim() : id;
 
-		const goal = extractPromptSection(content, "原始提问");
-		const constraints = extractPromptSection(content, "澄清结论");
-		const approach = extractPromptSection(content, "优化后提示词");
+		const { goal, constraints, approach } = extractPromptSections(content);
 
 		const sections: PlanSections = {
 			title,
@@ -404,14 +402,36 @@ function parsePromptOptimization(
 }
 
 /**
- * Extract the body of a `## <heading>` section from a prompt-optimization file.
- * Returns "" when the heading is absent.
+ * Split a prompt-optimization file into its three fixed archive sections.
+ *
+ * Only the three fixed headings (`## 原始提问` / `## 澄清结论` / `## 优化后提示词`)
+ * act as field boundaries. The final section (`优化后提示词`) runs to EOF so the
+ * structured prompt's own H2 sub-headings (`## 目标` / `## 上下文` / ...) are kept
+ * intact instead of being misread as the next top-level field.
  */
-function extractPromptSection(content: string, heading: string): string {
-	const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const re = new RegExp(`^##\\s+${escaped}\\s*$\\n([\\s\\S]*?)(?=\\n##\\s|$)`, "im");
-	const match = content.match(re);
-	return match ? match[1].trim() : "";
+function extractPromptSections(content: string): { goal: string; constraints: string; approach: string } {
+	const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const headingPos = (heading: string): number => {
+		const m = content.match(new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`, "im"));
+		return m && m.index !== undefined ? m.index : -1;
+	};
+	const afterHeadingLine = (pos: number): number => {
+		if (pos < 0) return -1;
+		const nl = content.indexOf("\n", pos);
+		return nl < 0 ? content.length : nl + 1;
+	};
+	const slice = (start: number, end: number): string =>
+		start < 0 ? "" : content.slice(start, end < 0 ? content.length : end).trim();
+
+	const question = headingPos("原始提问");
+	const clarify = headingPos("澄清结论");
+	const optimized = headingPos("优化后提示词");
+
+	return {
+		goal: slice(afterHeadingLine(question), clarify),
+		constraints: slice(afterHeadingLine(clarify), optimized),
+		approach: slice(afterHeadingLine(optimized), -1),
+	};
 }
 
 /**

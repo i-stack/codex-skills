@@ -13,7 +13,7 @@
 
 1. 阅读 `SKILL.md` + `references/prompt_optimizer.md` 全文。
 2. 历史召回（POPT-002）：针对原始提问 `recall` 相似历史，复用历史澄清结论，包成「不可信历史线索」边界。
-3. 盘问判定（POPT-003）：复用 plan-grill PG-000 门控；存在阻塞性歧义先逐一盘问澄清，无歧义直接改写。
+3. 盘问判定（POPT-003）：复用 plan-grill PG-000 门控 + PG-001~PG-003（仅 interview，不产出 PLAN.md）；存在阻塞性歧义先逐一盘问澄清，无歧义直接改写。
 4. 改写（POPT-004）：宿主 AI 把原始提问重写为结构化高质量提示词（目标 / 上下文 / 约束 / 期望输出）。
 5. 透明确认（POPT-005）：先展示优化后提示词，等用户确认或修正；确认后基于它回答。
 6. 回写闭环（POPT-006）：归档 `PROMPT-OPTIMIZATION.md` 到 `.plan-reviews/<date-slug>/` 并 `sync`。
