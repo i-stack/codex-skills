@@ -240,7 +240,13 @@ export function scanPlansDir(rootDir: string): PlanArtifact[] {
 		} else {
 			// ── Code-review artifact (auto-code-review) ──
 			const codeReviewArtifact = parseCodeReview(entry.name, planPath);
-			if (codeReviewArtifact) artifacts.push(codeReviewArtifact);
+			if (codeReviewArtifact) {
+				artifacts.push(codeReviewArtifact);
+			} else {
+				// ── Prompt-optimization artifact (prompt-optimizer) ──
+				const promptOptArtifact = parsePromptOptimization(entry.name, planPath);
+				if (promptOptArtifact) artifacts.push(promptOptArtifact);
+			}
 		}
 	}
 
@@ -341,6 +347,74 @@ function parseCodeReview(
 }
 
 /**
+ * Parse a prompt-optimizer directory into a PlanArtifact.
+ *
+ * A prompt-optimization directory contains PROMPT-OPTIMIZATION.md (and no
+ * PLAN.md / REVIEW-LOG.md / diff.patch). We synthesize a `sections` object so
+ * the existing entity/chunk extractors can index it without special-casing:
+ *   - title       ← first heading line of PROMPT-OPTIMIZATION.md
+ *   - goal        ← 原始提问 (the user's original question)
+ *   - constraints ← 澄清结论 (clarification outcome from the grilling pass)
+ *   - approach    ← 优化后提示词 (the optimized prompt)
+ *
+ * Returns null if the directory does not contain a PROMPT-OPTIMIZATION.md.
+ */
+function parsePromptOptimization(
+	id: string,
+	planPath: string,
+): PlanArtifact | null {
+	const promptOptFile = path.join(planPath, "PROMPT-OPTIMIZATION.md");
+	if (!fs.existsSync(promptOptFile)) return null;
+
+	try {
+		const content = fs.readFileSync(promptOptFile, "utf-8").replace(/\r\n/g, "\n");
+
+		const titleMatch = content.match(/^#\s+(.+?)\s*$/m);
+		const title = titleMatch ? titleMatch[1].trim() : id;
+
+		const goal = extractPromptSection(content, "原始提问");
+		const constraints = extractPromptSection(content, "澄清结论");
+		const approach = extractPromptSection(content, "优化后提示词");
+
+		const sections: PlanSections = {
+			title,
+			goal,
+			constraints,
+			approach,
+			decisions: "",
+			validation: "",
+			risks: "",
+			outOfScope: "",
+		};
+
+		return {
+			id,
+			path: planPath,
+			sections,
+			hasReview: false,
+			resolution: "pending",
+			reviewers: [],
+			createdAt: extractDateFromId(id),
+			kind: "prompt-optimization",
+		};
+	} catch (err) {
+		console.warn(`[plan-reviews] Failed to parse prompt-optimization ${id}: ${(err as Error).message}`);
+		return null;
+	}
+}
+
+/**
+ * Extract the body of a `## <heading>` section from a prompt-optimization file.
+ * Returns "" when the heading is absent.
+ */
+function extractPromptSection(content: string, heading: string): string {
+	const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const re = new RegExp(`^##\\s+${escaped}\\s*$\\n([\\s\\S]*?)(?=\\n##\\s|$)`, "im");
+	const match = content.match(re);
+	return match ? match[1].trim() : "";
+}
+
+/**
  * Check if a plan file has been modified since the given timestamp.
  */
 export function getPlanMtime(planPath: string): number {
@@ -353,6 +427,7 @@ export function getPlanMtime(planPath: string): number {
 	const questionFile = path.join(planPath, "QUESTION.md");
 	const responseFile = path.join(planPath, "RESPONSE.md");
 	const summaryFile = path.join(planPath, "SUMMARY.md");
+	const promptOptFile = path.join(planPath, "PROMPT-OPTIMIZATION.md");
 
 	let mtime = 0;
 	if (fs.existsSync(planFile)) {
@@ -378,6 +453,9 @@ export function getPlanMtime(planPath: string): number {
 	}
 	if (fs.existsSync(summaryFile)) {
 		mtime = Math.max(mtime, fs.statSync(summaryFile).mtimeMs);
+	}
+	if (fs.existsSync(promptOptFile)) {
+		mtime = Math.max(mtime, fs.statSync(promptOptFile).mtimeMs);
 	}
 	return mtime;
 }

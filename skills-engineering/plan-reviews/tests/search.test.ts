@@ -197,6 +197,28 @@ describe("PlanReviewsKB search", () => {
 		expect(block).toContain("load review config");
 	});
 
+	it("indexes prompt-optimization artifacts from PROMPT-OPTIMIZATION.md", async () => {
+		const root = makeTempProject();
+		const planId = "2026-09-07-prompt-opt-example";
+		const optDir = writePromptOptimization(root, planId, {
+			title: "登录接口限流提问优化",
+			question: "帮我优化提问：登录接口要加限流，别让人暴力破解。",
+			clarification: "确认是服务端限流，面向 API 登录接口，产出实现方案与关键代码。",
+			optimized: "请为登录接口实现服务端请求频率限制，防止暴力破解，需要给出实现方案与关键代码。",
+		});
+
+		const [artifact] = scanPlansDir(root);
+		expect(artifact.kind).toBe("prompt-optimization");
+		expect(artifact.sections.goal).toContain("登录接口要加限流");
+		expect(artifact.sections.approach).toContain("服务端请求频率限制");
+
+		const kb = await PlanReviewsKB.init({ projectRoot: root, embeddingApiKey: "" });
+		await kb.sync();
+		const block = await kb.recall("登录接口限流");
+		expect(block).toContain("服务端请求频率限制");
+		expect(optDir).toContain("prompt-opt-example");
+	});
+
 	it("re-indexes code-review artifacts when RESPONSE.md changes", async () => {
 		const root = makeTempProject();
 		const planId = "2026-07-07-response-mtime";
@@ -371,6 +393,30 @@ function writeCodeReview(
 	fs.writeFileSync(path.join(reviewDir, "REVIEW-LOG.md"), files.reviewLog);
 	fs.writeFileSync(path.join(reviewDir, "diff.patch"), files.diff);
 	return reviewDir;
+}
+
+function writePromptOptimization(
+	root: string,
+	id: string,
+	files: { title: string; question: string; clarification: string; optimized: string },
+): string {
+	const optDir = path.join(root, ".plan-reviews", id);
+	fs.mkdirSync(optDir, { recursive: true });
+	const content = [
+		`# ${files.title}`,
+		"",
+		"## 原始提问",
+		files.question,
+		"",
+		"## 澄清结论",
+		files.clarification,
+		"",
+		"## 优化后提示词",
+		files.optimized,
+		"",
+	].join("\n");
+	fs.writeFileSync(path.join(optDir, "PROMPT-OPTIMIZATION.md"), content);
+	return optDir;
 }
 
 function chunk(id: string, planId: string, embedding: number[]): EmbeddedChunk {

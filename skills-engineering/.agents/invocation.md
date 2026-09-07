@@ -43,6 +43,7 @@
 | 解读 / 翻译 / 赏析 / 道德经 / 易经 / 阴符经 / 庄子 / 克制模式 | classics-reading | P1（克制型经典解读；无义理需求时跳过） |
 | 立项 / Go-No-Go / 商业可行性 / MVP 实验 / 项目排序或终止 | project-decision-evaluation | P1 |
 | 锁定计划 / 盘问 / grill me / 先别写代码 | plan-grill | P1（条件自动 + 显式；产出 PLAN.md 供 cross-model-review 接力） |
+| 帮我优化提问 / 优化 prompt / 改写提问 / @prompt-optimizer | prompt-optimizer | P1（主动触发；委托 plan-grill 盘问 + historical-recall 召回，改写后回写闭环） |
 | 对抗审查 / cross review / stress-test PLAN.md | cross-model-review | P1（接力 plan-grill；需 PLAN.md 存在） |
 | 盲区 / 邻域 / 拓展 / 带走 | cognitive-reasoning (CE-001~013) | P2（回答后追加） |
 | `/auto-review` / `使用 auto-code-review` / `启动跨模型代码审查` | auto-code-review | P1（仅用户显式触发） |
