@@ -20,7 +20,7 @@ export interface PlanSections {
 }
 
 /** Artifact kind: a plan-grill/cross-model-review plan, an auto-code-review code review, or a prompt-optimizer prompt optimization. */
-export type PlanKind = "plan" | "code-review" | "prompt-optimization";
+export type PlanKind = "plan" | "code-review" | "prompt-optimization" | "checkpoint";
 
 /** Metadata about a single plan-review directory. */
 export interface PlanArtifact {

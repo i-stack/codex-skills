@@ -80,7 +80,14 @@ export class MergeEngine {
 	 * or fewer than 2 chunks).
 	 */
 	async merge(options?: { threshold?: number }): Promise<MergedKnowledgePoint[]> {
-		const chunks = this.store.getStoredChunks();
+		// Exclude in-progress checkpoint artifacts: merge consolidates finished
+		// knowledge only, never mid-flight intermediate state.
+		const checkpointPlanIds = new Set(
+			this.store.listPlans().filter((p) => p.kind === "checkpoint").map((p) => p.id),
+		);
+		const chunks = this.store.getStoredChunks().filter(
+			(chunk) => !checkpointPlanIds.has(chunk.planId),
+		);
 		if (chunks.length < 2) return [];
 
 		const threshold = options?.threshold ?? DEFAULT_MERGE_THRESHOLD;

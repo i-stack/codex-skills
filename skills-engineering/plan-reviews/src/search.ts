@@ -157,7 +157,10 @@ export class SearchEngine {
 						? `(merged-score=${hit.score.toFixed(2)}, sources=${hit.sourcePlanIds?.join(",") ?? ""})`
 						: `(lexical=${hit.score.toFixed(2)})`;
 				const trustLabel = hit.promptInjectionSuspected ? ` [PROMPT-INJECTION-SUSPECTED:${hit.promptInjectionSignals?.join(",")}]` : " [UNTRUSTED-HISTORY]";
-				lines.push(`- ${scoreLabel}${planLabel}${trustLabel}: ${truncate(hit.text, 200)}`);
+				const kindLabel = this.store.getPlan(hit.planId)?.kind === "checkpoint"
+					? " [进行中 checkpoint]"
+					: "";
+				lines.push(`- ${scoreLabel}${planLabel}${kindLabel}${trustLabel}: ${truncate(hit.text, 200)}`);
 			}
 			lines.push("");
 		}
@@ -167,8 +170,11 @@ export class SearchEngine {
 			const seenRelations = new Set<string>();
 
 			for (const r of response.graph) {
+				const graphKindLabel = this.store.getPlan(r.entity.planId)?.kind === "checkpoint"
+					? " [checkpoint]"
+					: "";
 				lines.push(
-					`### [${r.entity.type}] ${r.entity.name} (plan: ${r.entity.planId})`,
+					`### [${r.entity.type}] ${r.entity.name} (plan: ${r.entity.planId}${graphKindLabel})`,
 				);
 				if (r.entity.description) {
 					lines.push(`  ${truncate(r.entity.description, 150)}`);

@@ -192,6 +192,13 @@ export function scanPlansDir(rootDir: string): PlanArtifact[] {
 		if (entry.name.startsWith(".")) continue;
 
 		const planPath = path.join(plansDir, entry.name);
+
+		// ── Checkpoint artifact (checkpoint-persist) ──
+		if (entry.name === "checkpoint") {
+			scanCheckpointDir(planPath, artifacts);
+			continue;
+		}
+
 		const planFile = path.join(planPath, "PLAN.md");
 		const reviewFile = path.join(planPath, "PLAN-REVIEW-LOG.md");
 		const architectureFile = path.join(planPath, "architecture-analysis.md");
@@ -357,12 +364,9 @@ function parseCodeReview(
  *   - CLARIFICATION.md       → 澄清结论 (clarification outcome)
  *   - OPTIMIZED.md           → 优化后提示词 (the optimized prompt)
  *
- * A legacy single-file layout (all three fields inside PROMPT-OPTIMIZATION.md)
- * is still parsed as a best-effort fallback so pre-existing archives keep
- * indexing; that layout is inherently ambiguous when the question itself
- * contains a reserved heading.
- *
- * Returns null if neither the manifest nor any field file is present.
+ * Returns null unless at least one field file is present. A lone manifest
+ * (the retired single-file layout) is refused, never indexed as an empty
+ * artifact.
  */
 function parsePromptOptimization(
 	id: string,
@@ -378,7 +382,17 @@ function parsePromptOptimization(
 		fs.existsSync(questionFile) ||
 		fs.existsSync(clarificationFile) ||
 		fs.existsSync(optimizedFile);
-	if (!hasManifest && !hasFieldFiles) return null;
+	if (!hasFieldFiles) {
+		// A lone manifest without field files is the retired single-file layout;
+		// refuse to index it as an empty-but-valid-looking artifact.
+		if (hasManifest) {
+			console.warn(
+				`[plan-reviews] Skipping legacy single-file prompt-optimization archive at ${planPath}; ` +
+					`migrate to per-field files (QUESTION.md / CLARIFICATION.md / OPTIMIZED.md) to index it.`,
+			);
+		}
+		return null;
+	}
 
 	try {
 		const readText = (file: string): string =>
@@ -393,22 +407,9 @@ function parsePromptOptimization(
 			if (h1) title = h1[1].trim();
 		}
 
-		let goal = "";
-		let constraints = "";
-		let approach = "";
-
-		if (hasFieldFiles) {
-			// New layout: one file per field — arbitrary Markdown is preserved verbatim.
-			goal = readText(questionFile);
-			constraints = readText(clarificationFile);
-			approach = readText(optimizedFile);
-		} else {
-			// Legacy single-file layout (best-effort; see doc comment above).
-			const legacy = extractPromptSections(readText(manifestFile));
-			goal = legacy.goal;
-			constraints = legacy.constraints;
-			approach = legacy.approach;
-		}
+		const goal = readText(questionFile);
+		const constraints = readText(clarificationFile);
+		const approach = readText(optimizedFile);
 
 		const sections: PlanSections = {
 			title,
@@ -438,37 +439,149 @@ function parsePromptOptimization(
 }
 
 /**
- * Legacy single-file parser for prompt-optimization archives.
+ * Parse a checkpoint-persist artifact directory into a PlanArtifact.
  *
- * New archives store each field in its own file (see `parsePromptOptimization`);
- * this helper only back-fills archives still using the old single-file layout.
- * It splits on the first occurrence of each fixed heading, so it is inherently
- * ambiguous when the original question itself contains `## 澄清结论` or
- * `## 优化后提示词` — exactly why the single-file layout was retired.
+ * A checkpoint directory (`.plan-reviews/checkpoint/<task-slug>/CHECKPOINT.md`)
+ * carries mid-flight intermediate conclusions produced by the global
+ * `checkpoint-persist` skill. Unlike a finished PLAN.md, it is "in progress":
+ *   - title     ← `# Checkpoint: <主题>` heading (fallback: directory name)
+ *   - goal      ← `## 任务摘要` (task summary)
+ *   - decisions ← `## 已产出结论` (conclusions + decisions produced so far)
+ *   - risks     ← `- 未决问题：` lines extracted from conclusions
+ *   - approach  ← `## 下一步` (remaining items to analyze)
+ *
+ * Returns null if the directory has no CHECKPOINT.md.
  */
-function extractPromptSections(content: string): { goal: string; constraints: string; approach: string } {
-	const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const headingPos = (heading: string): number => {
-		const m = content.match(new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`, "im"));
-		return m && m.index !== undefined ? m.index : -1;
-	};
-	const afterHeadingLine = (pos: number): number => {
-		if (pos < 0) return -1;
-		const nl = content.indexOf("\n", pos);
-		return nl < 0 ? content.length : nl + 1;
-	};
-	const slice = (start: number, end: number): string =>
-		start < 0 ? "" : content.slice(start, end < 0 ? content.length : end).trim();
+function parseCheckpoint(slug: string, taskDir: string): PlanArtifact | null {
+	const checkpointFile = path.join(taskDir, "CHECKPOINT.md");
+	if (!fs.existsSync(checkpointFile)) return null;
 
-	const question = headingPos("原始提问");
-	const clarify = headingPos("澄清结论");
-	const optimized = headingPos("优化后提示词");
+	try {
+		const content = fs.readFileSync(checkpointFile, "utf-8").replace(/\r\n/g, "\n");
+		const titleMatch = content.match(/^#\s+(?:Checkpoint\s*:\s*)?(.+?)\s*$/m);
+		const title = titleMatch ? titleMatch[1].trim() : slug;
+		const summary = extractMarkdownSection(content, "任务摘要");
+		const conclusions = extractMarkdownSection(content, "已产出结论");
+		const next = extractMarkdownSection(content, "下一步");
+		// Drop blank placeholders (无 / N/A / none / …) so a template default is
+		// never indexed as a real risk; leave risks empty when nothing remains.
+		const openQuestions = filterBlankValues(extractLabeledLines(conclusions, "未决问题"));
 
-	return {
-		goal: slice(afterHeadingLine(question), clarify),
-		constraints: slice(afterHeadingLine(clarify), optimized),
-		approach: slice(afterHeadingLine(optimized), -1),
-	};
+		const sections: PlanSections = {
+			title,
+			goal: summary,
+			constraints: "",
+			approach: next,
+			decisions: conclusions,
+			validation: "",
+			risks: openQuestions,
+			outOfScope: "",
+		};
+
+		return {
+			// Namespace checkpoint ids with a reserved prefix so an in-progress
+			// checkpoint can never collide with a finished plan sharing the same
+			// directory slug (PlanStore / sync / chunks / entities all key on planId).
+			id: `checkpoint:${slug}`,
+			path: taskDir,
+			sections,
+			hasReview: false,
+			resolution: "pending",
+			reviewers: [],
+			createdAt:
+				extractDateFromId(slug) !== "unknown"
+					? extractDateFromId(slug)
+					: isoDateFromMtime(checkpointFile),
+			kind: "checkpoint",
+		};
+	} catch (err) {
+		console.warn(`[plan-reviews] Failed to parse checkpoint ${slug}: ${(err as Error).message}`);
+		return null;
+	}
+}
+
+/**
+ * Scan `.plan-reviews/checkpoint/` for per-task checkpoint directories.
+ * Each sub-directory containing a CHECKPOINT.md becomes a checkpoint artifact.
+ */
+function scanCheckpointDir(checkpointDir: string, artifacts: PlanArtifact[]): void {
+	if (!fs.existsSync(checkpointDir)) return;
+
+	let entries: fs.Dirent[];
+	try {
+		entries = fs.readdirSync(checkpointDir, { withFileTypes: true });
+	} catch {
+		return;
+	}
+
+	for (const entry of entries) {
+		if (!entry.isDirectory()) continue;
+		if (entry.name.startsWith(".")) continue;
+
+		const taskDir = path.join(checkpointDir, entry.name);
+		const artifact = parseCheckpoint(entry.name, taskDir);
+		if (artifact) artifacts.push(artifact);
+	}
+}
+
+/**
+ * Extract the body of a `## <header>` Markdown section (up to the next `## `).
+ */
+function extractMarkdownSection(content: string, header: string): string {
+	const pattern = new RegExp(`^##\\s+${header}\\s*$`, "m");
+	const match = pattern.exec(content);
+	if (!match || match.index === undefined) return "";
+
+	const start = match.index + match[0].length;
+	const rest = content.slice(start);
+	const next = rest.match(/^##\s+/m);
+	const end = next ? start + (next.index ?? 0) : content.length;
+	return content.slice(start, end).trim();
+}
+
+/**
+ * Extract the values of all `- <label>：<value>` lines within a section body.
+ */
+function extractLabeledLines(section: string, label: string): string {
+	const pattern = new RegExp(`^\\s*-\\s*${label}\\s*[：:]\\s*(.+)$`, "gm");
+	const lines: string[] = [];
+	let m: RegExpExecArray | null;
+	while ((m = pattern.exec(section)) !== null) {
+		lines.push(m[1].trim());
+	}
+	return lines.join("\n");
+}
+
+/**
+ * Drop blank placeholders (无 / 暂无 / N/A / none / …) from newline-joined lines.
+ * Returns the remaining non-blank lines; empty string when nothing remains.
+ */
+function filterBlankValues(lines: string): string {
+	return lines
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line !== "" && !isBlankValue(line))
+		.join("\n");
+}
+
+/**
+ * Recognize a value that semantically means "no open question" (template default),
+ * so it is never indexed as a real risk entity.
+ */
+function isBlankValue(value: string): boolean {
+	const normalized = value.replace(/[。.；;]\s*$/u, "").trim().toLowerCase();
+	return ["无", "暂无", "没有", "none", "n/a", "na", "null", "nil", "-", "—", "~"].includes(normalized);
+}
+
+/**
+ * ISO date (YYYY-MM-DD) from a file's mtime, for artifacts without a date prefix.
+ */
+function isoDateFromMtime(file: string): string {
+	try {
+		return new Date(fs.statSync(file).mtimeMs).toISOString().slice(0, 10);
+	} catch {
+		return "unknown";
+	}
 }
 
 /**
@@ -487,6 +600,8 @@ export function getPlanMtime(planPath: string): number {
 	const promptOptFile = path.join(planPath, "PROMPT-OPTIMIZATION.md");
 	const promptClarificationFile = path.join(planPath, "CLARIFICATION.md");
 	const promptOptimizedFile = path.join(planPath, "OPTIMIZED.md");
+	// checkpoint-persist artifacts
+	const checkpointFile = path.join(planPath, "CHECKPOINT.md");
 
 	let mtime = 0;
 	if (fs.existsSync(planFile)) {
@@ -521,6 +636,9 @@ export function getPlanMtime(planPath: string): number {
 	}
 	if (fs.existsSync(promptOptimizedFile)) {
 		mtime = Math.max(mtime, fs.statSync(promptOptimizedFile).mtimeMs);
+	}
+	if (fs.existsSync(checkpointFile)) {
+		mtime = Math.max(mtime, fs.statSync(checkpointFile).mtimeMs);
 	}
 	return mtime;
 }

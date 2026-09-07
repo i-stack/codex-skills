@@ -276,6 +276,24 @@ describe("PlanReviewsKB search", () => {
 		expect(artifact.sections.approach).toBe("请重构登录接口，面向 API。");
 	});
 
+	it("refuses legacy single-file prompt-optimization archives (no field files)", async () => {
+		const root = makeTempProject();
+		const planId = "2026-09-07-legacy-single-file";
+		const optDir = path.join(root, ".plan-reviews", planId);
+		fs.mkdirSync(optDir, { recursive: true });
+		// Retired layout: everything inside PROMPT-OPTIMIZATION.md, no field files.
+		fs.writeFileSync(
+			path.join(optDir, "PROMPT-OPTIMIZATION.md"),
+			"# 旧格式标题\n\n" +
+				"## 原始提问\n旧问题正文\n\n" +
+				"## 澄清结论\n旧澄清正文\n\n" +
+				"## 优化后提示词\n旧优化正文\n",
+		);
+
+		const artifacts = scanPlansDir(root);
+		expect(artifacts).toHaveLength(0);
+	});
+
 	it("re-indexes code-review artifacts when RESPONSE.md changes", async () => {
 		const root = makeTempProject();
 		const planId = "2026-07-07-response-mtime";
@@ -423,6 +441,51 @@ describe("PlanReviewsKB search", () => {
 		const kb = await PlanReviewsKB.init({ projectRoot: root, embeddingApiKey: "" });
 		expect(kb.store.listPlans()[0].kind).toBe("plan");
 	});
+
+	it("namespaces checkpoint ids so a checkpoint never clobbers a same-slug plan", async () => {
+		const root = makeTempProject();
+		// Finished plan at .plan-reviews/login-rate-limit/PLAN.md
+		writePlan(root, "login-rate-limit", "Login Rate Limit", "## Goal\nfinished-marker\n");
+		// In-progress checkpoint at .plan-reviews/checkpoint/login-rate-limit/CHECKPOINT.md
+		writeCheckpoint(root, "login-rate-limit", {
+			title: "登录接口速率限制（进行中）",
+			summary: "checkpoint-goal-marker",
+			conclusions: "### 1. 算法选型\n- 结论：用 Redis 滑动窗口。\n- 未决问题：无\n",
+			next: "补测试",
+		});
+
+		const kb = await PlanReviewsKB.init({ projectRoot: root, embeddingApiKey: "" });
+		await kb.sync();
+
+		const ids = kb.store.listPlans().map((p) => p.id).sort();
+		expect(ids).toContain("login-rate-limit");
+		expect(ids).toContain("checkpoint:login-rate-limit");
+		expect(ids).toHaveLength(2);
+	});
+
+	it("does not index template-blank open questions as risks", async () => {
+		const root = makeTempProject();
+		writeCheckpoint(root, "rate-limit", {
+			title: "登录限流",
+			summary: "给登录接口加限流。",
+			conclusions: [
+				"### 1. 算法选型",
+				"- 结论：用 Redis 滑动窗口。",
+				"- 关键决策：窗口 60 秒。",
+				"- 未决问题：无",
+				"",
+				"### 2. 失败计数",
+				"- 结论：用 Redis 键存失败次数。",
+				"- 未决问题：分布式时钟偏移未验证。",
+			].join("\n"),
+			next: "补测试",
+		});
+
+		const [artifact] = scanPlansDir(root);
+		expect(artifact.kind).toBe("checkpoint");
+		// The "无" placeholder is dropped; only the real open question remains.
+		expect(artifact.sections.risks).toBe("分布式时钟偏移未验证。");
+	});
 });
 
 function makeTempProject(): string {
@@ -468,4 +531,30 @@ function writePromptOptimization(
 
 function chunk(id: string, planId: string, embedding: number[]): EmbeddedChunk {
 	return { id, planId, section: "review_log", text: id, embedding };
+}
+
+function writeCheckpoint(
+	root: string,
+	slug: string,
+	files: { title: string; summary: string; conclusions: string; next: string },
+): string {
+	const dir = path.join(root, ".plan-reviews", "checkpoint", slug);
+	fs.mkdirSync(dir, { recursive: true });
+	const content = [
+		`# Checkpoint: ${files.title}`,
+		"",
+		"- 状态：进行中",
+		"- 更新时间：2026-09-07T08:00:00Z",
+		"",
+		"## 任务摘要",
+		files.summary,
+		"",
+		"## 已产出结论",
+		files.conclusions,
+		"",
+		"## 下一步",
+		files.next,
+	].join("\n");
+	fs.writeFileSync(path.join(dir, "CHECKPOINT.md"), content);
+	return dir;
 }

@@ -3,6 +3,7 @@
   "max_age_months": 12,
   "skills": {
     "auto-code-review": "auto-code-review/SKILL.md",
+    "checkpoint-persist": "checkpoint-persist/SKILL.md",
     "classics-reading": "classics-reading/SKILL.md",
     "cognitive-reasoning": "cognitive-reasoning/SKILL.md",
     "cross-model-review": "cross-model-review/SKILL.md",

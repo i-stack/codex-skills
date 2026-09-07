@@ -48,6 +48,7 @@
 | 盲区 / 邻域 / 拓展 / 带走 | cognitive-reasoning (CE-001~013) | P2（回答后追加） |
 | `/auto-review` / `使用 auto-code-review` / `启动跨模型代码审查` | auto-code-review | P1（仅用户显式触发） |
 | 非平凡构建/修改/方案/迁移/审查/排障（动手前召回历史） | historical-recall | P1（全局门控；best-effort，不阻断主任务） |
+| 非平凡 + ≥2 子结论 + 跨轮存活（边做边落盘中间结论） | checkpoint-persist | P1（全局门控；每产出一结论即落盘，防超窗丢失） |
 
 `auto-code-review` 不因代码生成或修改完成自动加载。默认触发只授权只读审查；只有 `/auto-review --fix` 或明确“审查并修复”才授权主 agent 修改代码。
 
