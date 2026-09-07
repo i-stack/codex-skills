@@ -21,7 +21,7 @@ For every non-trivial build/modify/solution request, first perform requirements 
 3. One question at a time (PG-001), each question with recommended answer + reasoning (PG-002).
 4. For questions answerable by checking code, check directly, don't ask user (PG-003).
 5. When PG-003 involves cross-file/cross-module dependency analysis and platform engineer is loaded, pause grilling, delegate quick architecture analysis and write `architecture-analysis.md` path back to PLAN.md (PG-005).
-6. After the decision tree is resolved and the user confirms, create `.plan-reviews/<plan-slug>/` under the current workspace root and write the substantively completed seven-section plan to `.plan-reviews/<plan-slug>/PLAN.md` (PG-004).
+6. After the decision tree is resolved and the user confirms, invoke `scripts/write_plan.py` to write the complete plan to `.plan-reviews/<plan-slug>/PLAN.md` under the current workspace root (PG-004). Claim it is locked only when the script exits zero.
 7. Do not execute plan before confirmation.
 
 ## When Not to Invoke

@@ -73,8 +73,10 @@ Q: <问题>
 决策树解析完且与用户达成共识后，以当前项目或工作区的根目录为 `<工作区根>`，执行以下落盘动作：
 
 1. 为本轮计划生成稳定、语义化的短横线 `<plan-slug>`；同一轮盘问及后续 `cross-model-review` 必须复用该 slug。
-2. 创建 `<工作区根>/.plan-reviews/<plan-slug>/`（父目录不存在时一并创建）。
-3. 将计划写入 `<工作区根>/.plan-reviews/<plan-slug>/PLAN.md`，不得写到工作区根的 `PLAN.md`，也不得写到 skill 仓库或其它项目目录。
+2. 将完整计划正文交给本 skill 自带的 `scripts/write_plan.py`。推荐使用 `--input <draft-file>`；也可通过标准输入传入正文：`python3 <skill-dir>/scripts/write_plan.py --workspace-root <工作区根> --slug <plan-slug>`。
+3. 以脚本退出状态为写入后置条件：脚本负责创建父目录、原子写入、读回验证路径和七段内容，并在成功时输出 `PLAN.md` 的绝对路径。
+4. 只有脚本零退出且输出路径为 `<工作区根>/.plan-reviews/<plan-slug>/PLAN.md`，计划状态才可称为“已锁定”。只在对话中展示 Markdown、只创建目录、直接绕过脚本写文件，都不算 PG-004 完成。
+5. 脚本不可执行、工作区只读、越权审批未获准或脚本非零退出时，明确报告目标路径与错误信息，状态保持“未锁定”。
 
 `PLAN.md` 内容格式：
 
@@ -106,7 +108,7 @@ Q: <问题>
 - <明确不做的事>
 ```
 
-写入后告知用户实际相对路径：「`.plan-reviews/<plan-slug>/PLAN.md` 已锁定。如需跨模型对抗审查，接力 `cross-model-review`。」
+写入并读回验证成功后，告知用户实际相对路径：「`.plan-reviews/<plan-slug>/PLAN.md` 已锁定。如需跨模型对抗审查，接力 `cross-model-review`。」
 
 ### PG-005 架构分析委托
 
@@ -169,7 +171,8 @@ PG-003 探索代码库时，若涉及**跨文件/跨模块依赖分析**（如�
 - [ ] 是否每个问题都给了推荐答案 + 理由？
 - [ ] 是否有本可查代码却问了用户的问题？（应改为查代码）
 - [ ] 决策树是否还有未决叶子？
-- [ ] `.plan-reviews/<plan-slug>/PLAN.md` 是否已在当前工作区根下创建，且七段填实、无占位符？
+- [ ] 是否已调用 `scripts/write_plan.py`，且脚本零退出并返回当前工作区根下的 `.plan-reviews/<plan-slug>/PLAN.md`？
+- [ ] 若脚本不可执行或非零退出，是否保持“未锁定”并报告了目标路径与错误信息？
 - [ ] blocking open questions 是否已清空？non-blocking risks 是否已记录？
 - [ ] 涉及跨文件依赖分析时，是否已委托平台 engineer 产出 architecture-analysis.md？（PG-005）
 

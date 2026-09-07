@@ -17,7 +17,7 @@
 3. 一次一个问题（PG-001），每问给推荐答案 + 理由（PG-002）。
 4. 能查代码回答的，直接查，不问用户（PG-003）。
 5. PG-003 涉及跨文件/跨模块依赖分析且已加载平台 engineer 时，暂停盘问，委托快速架构分析并把 `architecture-analysis.md` 路径写回 PLAN.md（PG-005）。
-6. 决策树解析完且用户确认后，在当前工作区根创建 `.plan-reviews/<plan-slug>/`，将七段填实的计划写入 `.plan-reviews/<plan-slug>/PLAN.md`（PG-004）。
+6. 决策树解析完且用户确认后，调用 `scripts/write_plan.py`，将完整计划写到当前工作区根的 `.plan-reviews/<plan-slug>/PLAN.md`（PG-004）；仅脚本零退出时可声称“已锁定”。
 7. 确认前不执行计划。
 
 ## 不调用的情况
