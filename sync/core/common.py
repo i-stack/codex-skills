@@ -610,6 +610,19 @@ def mcp_enabled(cfg: dict[str, Any]) -> bool:
     return cfg.get("enabled", True) is True
 
 
+def skill_sync_disabled() -> bool:
+    """Return True when the SKIP_SKILL_SYNC env var is set to ``1``.
+
+    Skill distribution copies every skill dir into each platform's skills
+    folder and then cleans its ``.tmp-sync`` / ``.backup-sync`` staging dirs via
+    ``shutil.rmtree``. In environments with a bulk-delete guard (e.g. CodeBuddy's
+    safe-delete threshold), those recursive deletes are intercepted and abort the
+    sync, so callers may opt out of skill sync entirely by setting
+    ``SKIP_SKILL_SYNC=1``. MCP / model / settings sync is unaffected.
+    """
+    return os.environ.get("SKIP_SKILL_SYNC") == "1"
+
+
 # ── Path helpers (imported from centralized paths module) ────────────────────
 
 from .paths import (  # noqa: F401

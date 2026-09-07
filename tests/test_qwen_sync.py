@@ -575,6 +575,29 @@ class QwenSyncTests(unittest.TestCase):
         self.assertIn("env", result["settings"])
         self.assertIn("modelProviders", result["settings"])
 
+    def test_skill_sync_skipped_when_skip_env_set(self) -> None:
+        """SKIP_SKILL_SYNC=1 skips skill distribution but keeps settings sync."""
+        claude_skills = self.root / "home" / ".claude" / "skills"
+        skill_dir = claude_skills / "test-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
+
+        old = os.environ.get("SKIP_SKILL_SYNC")
+        os.environ["SKIP_SKILL_SYNC"] = "1"
+        try:
+            result = self._run_qwen_sync()
+        finally:
+            if old is None:
+                os.environ.pop("SKIP_SKILL_SYNC", None)
+            else:
+                os.environ["SKIP_SKILL_SYNC"] = old
+
+        dest = self.root / "home" / ".qwen" / "skills" / "test-skill"
+        self.assertFalse(dest.exists(), "Skill dir should not be synced when SKIP_SKILL_SYNC=1")
+        # Env and settings still sync.
+        self.assertIn("env", result["settings"])
+        self.assertIn("modelProviders", result["settings"])
+
     # ── MCP handling ────────────────────────────────────────────────────────
 
     def test_mcp_servers_are_ignored(self) -> None:

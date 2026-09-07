@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-09-07
+
+- **sync 新增 `SKIP_SKILL_SYNC` 环境变量（受控跳过 skill 分发）**: 新增共享开关 `skill_sync_disabled()`，`SKIP_SKILL_SYNC=1` 时 CodeBuddy / Cline / Qwen 三个平台的 `_sync_skills()` 直接跳过，避免在带批量删除保护的环境（如 CodeBuddy 的 safe-delete，阈值 500）中因 `shutil.rmtree` 清理 `.tmp-sync` / `.backup-sync` 被拦截而中断同步。MCP / 模型 / 设置 / 全局状态同步不受影响。普通用户与 CI 不设置该变量，行为不变；agent 环境可 `SKIP_SKILL_SYNC=1 git push` 显式跳过。配套测试覆盖三平台跳过路径，文档见 `sync/README.md`。
+
 ## 2026-09-05
 
 - **rollback 完整性刷新失败不再吞掉**: `validate-skill-integrity.sh` 刷新模式在成功写入新基线后改为 exit 0，采集哈希或写入失败才 exit 1；`--check-only` 仍对漂移失败。`rollback-skill-evolution.sh` 去掉 `|| true`，刷新后再跑 `--check-only`，失败则明确非零退出，不再在基线未登记时打印 `Rolled back`。

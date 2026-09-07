@@ -8,6 +8,7 @@ from core.common import (
     is_managed_entry,
     merge_managed_entries,
     read_json_object,
+    skill_sync_disabled,
     sync_json_mcp,
     write_json,
 )
@@ -208,6 +209,9 @@ def _sync_skills_to(claude_skills_dir: Path, target_skills_dir: Path, label: str
 
 
 def _sync_skills() -> None:
+    if skill_sync_disabled():
+        print("[codebuddy] SKIP_SKILL_SYNC=1 — skipping skill sync.")
+        return
     claude_skills_dir = claude_skills_base()
     if not claude_skills_dir.exists():
         print(f"[codebuddy] Claude skills directory not found: {claude_skills_dir} — skipping skill sync.")

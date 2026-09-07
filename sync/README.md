@@ -204,6 +204,19 @@ python3 sync/cli/main.py sync --target all  # sync all (Python direct)
 python3 sync/cli/main.py sync --target codex  # single platform
 ```
 
+## 跳过 skill 分发
+
+`sync` 会把每个 skill 目录分发到各平台的 `skills/` 目录，并用 `shutil.rmtree` 清理
+`.tmp-sync` / `.backup-sync` 临时目录。在带有批量删除保护的环境中（如 CodeBuddy 的
+safe-delete，阈值 500），这些递归删除会被拦截并中断同步。此时可设置环境变量跳过
+skill 分发（MCP / 模型 / 设置同步不受影响）：
+
+```bash
+SKIP_SKILL_SYNC=1 bash sync.sh
+```
+
+普通用户与 CI 无需设置该变量，默认行为不变。
+
 ## 可选 MCP 服务器
 
 开箱即用的服务器和**非默认、社区/高级**服务器都在 `env/mcp/`。后者以显式 `"enabled": false`

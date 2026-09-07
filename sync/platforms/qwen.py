@@ -28,6 +28,7 @@ from core.common import (
     is_managed_entry,
     merge_managed_entries,
     read_json_object,
+    skill_sync_disabled,
     write_json,
 )
 from core.paths import (
@@ -343,6 +344,9 @@ def _sync_settings_block(cfg: dict[str, Any], api_enabled: bool) -> None:
 
 
 def _sync_skills() -> None:
+    if skill_sync_disabled():
+        print("[qwen] SKIP_SKILL_SYNC=1 — skipping skill sync.")
+        return
     claude_skills_dir = claude_skills_base()
     qwen_skills_dir = qwen_skills_base()
     if not claude_skills_dir.exists():

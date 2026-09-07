@@ -7,6 +7,7 @@ from core.common import (
     api_enabled as _api_enabled,
     merge_managed_dict,
     read_json_object,
+    skill_sync_disabled,
     write_json,
 )
 from core.paths import (
@@ -74,6 +75,9 @@ def _sync_mcp(servers: dict[str, Any]) -> None:
 
 
 def _sync_skills() -> None:
+    if skill_sync_disabled():
+        print("[cline] SKIP_SKILL_SYNC=1 — skipping skill sync.")
+        return
     claude_skills_dir = claude_skills_base()
     cline_skills_dir = cline_skills_base()
     if not claude_skills_dir.exists():
