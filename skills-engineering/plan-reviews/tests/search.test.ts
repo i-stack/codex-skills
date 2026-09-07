@@ -253,6 +253,29 @@ describe("PlanReviewsKB search", () => {
 		expect(block).toContain("双维度");
 	});
 
+	it("keeps fields aligned when the original question contains reserved headings", async () => {
+		const root = makeTempProject();
+		writePromptOptimization(root, "2026-09-07-reserved-heading", {
+			title: "原始提问含保留标题",
+			question:
+				"帮我优化这个 prompt：\n\n" +
+				"## 澄清结论\n模板正文 A\n\n" +
+				"## 优化后提示词\n模板正文 B\n\n" +
+				"真正的需求是重构登录。",
+			clarification: "真正澄清结论：面向 API 登录。",
+			optimized: "请重构登录接口，面向 API。",
+		});
+
+		const [artifact] = scanPlansDir(root);
+		expect(artifact.kind).toBe("prompt-optimization");
+		// Reserved headings inside the question must not shift the field boundaries.
+		expect(artifact.sections.goal).toContain("## 澄清结论");
+		expect(artifact.sections.goal).toContain("模板正文 A");
+		expect(artifact.sections.goal).toContain("真正的需求是重构登录");
+		expect(artifact.sections.constraints).toBe("真正澄清结论：面向 API 登录。");
+		expect(artifact.sections.approach).toBe("请重构登录接口，面向 API。");
+	});
+
 	it("re-indexes code-review artifacts when RESPONSE.md changes", async () => {
 		const root = makeTempProject();
 		const planId = "2026-07-07-response-mtime";
@@ -436,20 +459,10 @@ function writePromptOptimization(
 ): string {
 	const optDir = path.join(root, ".plan-reviews", id);
 	fs.mkdirSync(optDir, { recursive: true });
-	const content = [
-		`# ${files.title}`,
-		"",
-		"## 原始提问",
-		files.question,
-		"",
-		"## 澄清结论",
-		files.clarification,
-		"",
-		"## 优化后提示词",
-		files.optimized,
-		"",
-	].join("\n");
-	fs.writeFileSync(path.join(optDir, "PROMPT-OPTIMIZATION.md"), content);
+	fs.writeFileSync(path.join(optDir, "PROMPT-OPTIMIZATION.md"), `# ${files.title}\n`);
+	fs.writeFileSync(path.join(optDir, "QUESTION.md"), `${files.question}\n`);
+	fs.writeFileSync(path.join(optDir, "CLARIFICATION.md"), `${files.clarification}\n`);
+	fs.writeFileSync(path.join(optDir, "OPTIMIZED.md"), `${files.optimized}\n`);
 	return optDir;
 }
 

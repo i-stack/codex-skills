@@ -66,19 +66,18 @@
 
 1. 目录：`.plan-reviews/<YYYY-MM-DD>-<slug>/`，`slug` 为原始提问的简短概括（英文/拼音、小写、连字符分隔）。
    - **碰撞策略**：归档前检测目标目录是否已存在；若存在，追加递增数字后缀 `-2`、`-3`…（如 `.plan-reviews/<YYYY-MM-DD>-<slug>-2/`），**禁止覆盖既有记录**，保证「越用越准」的历史不被同 slug 重试抹掉。
-2. 文件：`PROMPT-OPTIMIZATION.md`，格式：
+2. 文件：**每个字段独立成文件**（字段正文可能是任意 Markdown，独立文件保证正文里的 `##` 标题不会与归档字段标题碰撞）：
 
-   ```markdown
-   # <一句话标题>
+   - `PROMPT-OPTIMIZATION.md`：仅存一行 `# <一句话标题>`，同时作为本目录的归档类型标记；
+   - `QUESTION.md`：原始提问，原样写入；
+   - `CLARIFICATION.md`：盘问澄清得到的关键信息（未盘问则写「无需盘问」）；
+   - `OPTIMIZED.md`：POPT-004 产出的最终（确认版）提示词。
 
-   ## 原始提问
-   <用户原始输入>
-
-   ## 澄清结论
-   <盘问澄清得到的关键信息；未盘问则写「无需盘问」>
-
-   ## 优化后提示词
-   <POPT-004 产出的最终（确认版）提示词>
+   ```text
+   PROMPT-OPTIMIZATION.md   # <一句话标题>
+   QUESTION.md              # <用户原始输入>
+   CLARIFICATION.md         # <盘问澄清得到的关键信息；未盘问则写「无需盘问」>
+   OPTIMIZED.md             # <POPT-004 产出的最终（确认版）提示词>
    ```
 
 3. 归档后执行 `sync` 回灌知识库（`node <RECALL_CLI_PATH> sync`，CLI 路径同 historical-recall 的 `RECALL_CLI_PATH`，即 `<仓库根>/skills-engineering/plan-reviews/dist/cli.js`），使该提问可被后续 `recall` 召回。

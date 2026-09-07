@@ -349,30 +349,66 @@ function parseCodeReview(
 /**
  * Parse a prompt-optimizer directory into a PlanArtifact.
  *
- * A prompt-optimization directory contains PROMPT-OPTIMIZATION.md (and no
- * PLAN.md / REVIEW-LOG.md / diff.patch). We synthesize a `sections` object so
- * the existing entity/chunk extractors can index it without special-casing:
- *   - title       ← first heading line of PROMPT-OPTIMIZATION.md
- *   - goal        ← 原始提问 (the user's original question)
- *   - constraints ← 澄清结论 (clarification outcome from the grilling pass)
- *   - approach    ← 优化后提示词 (the optimized prompt)
+ * A prompt-optimization directory stores each archive field in its own file so
+ * arbitrary user text (which may contain `## 澄清结论` / `## 优化后提示词` or
+ * any other Markdown) never collides with field delimiters:
+ *   - PROMPT-OPTIMIZATION.md → manifest carrying the `# <title>` line
+ *   - QUESTION.md            → 原始提问 (the user's original question)
+ *   - CLARIFICATION.md       → 澄清结论 (clarification outcome)
+ *   - OPTIMIZED.md           → 优化后提示词 (the optimized prompt)
  *
- * Returns null if the directory does not contain a PROMPT-OPTIMIZATION.md.
+ * A legacy single-file layout (all three fields inside PROMPT-OPTIMIZATION.md)
+ * is still parsed as a best-effort fallback so pre-existing archives keep
+ * indexing; that layout is inherently ambiguous when the question itself
+ * contains a reserved heading.
+ *
+ * Returns null if neither the manifest nor any field file is present.
  */
 function parsePromptOptimization(
 	id: string,
 	planPath: string,
 ): PlanArtifact | null {
-	const promptOptFile = path.join(planPath, "PROMPT-OPTIMIZATION.md");
-	if (!fs.existsSync(promptOptFile)) return null;
+	const manifestFile = path.join(planPath, "PROMPT-OPTIMIZATION.md");
+	const questionFile = path.join(planPath, "QUESTION.md");
+	const clarificationFile = path.join(planPath, "CLARIFICATION.md");
+	const optimizedFile = path.join(planPath, "OPTIMIZED.md");
+
+	const hasManifest = fs.existsSync(manifestFile);
+	const hasFieldFiles =
+		fs.existsSync(questionFile) ||
+		fs.existsSync(clarificationFile) ||
+		fs.existsSync(optimizedFile);
+	if (!hasManifest && !hasFieldFiles) return null;
 
 	try {
-		const content = fs.readFileSync(promptOptFile, "utf-8").replace(/\r\n/g, "\n");
+		const readText = (file: string): string =>
+			fs.existsSync(file)
+				? fs.readFileSync(file, "utf-8").replace(/\r\n/g, "\n").trim()
+				: "";
 
-		const titleMatch = content.match(/^#\s+(.+?)\s*$/m);
-		const title = titleMatch ? titleMatch[1].trim() : id;
+		// Title lives in the manifest's first H1 line; fall back to the dir id.
+		let title = id;
+		if (hasManifest) {
+			const h1 = readText(manifestFile).match(/^#\s+(.+?)\s*$/m);
+			if (h1) title = h1[1].trim();
+		}
 
-		const { goal, constraints, approach } = extractPromptSections(content);
+		let goal = "";
+		let constraints = "";
+		let approach = "";
+
+		if (hasFieldFiles) {
+			// New layout: one file per field — arbitrary Markdown is preserved verbatim.
+			goal = readText(questionFile);
+			constraints = readText(clarificationFile);
+			approach = readText(optimizedFile);
+		} else {
+			// Legacy single-file layout (best-effort; see doc comment above).
+			const legacy = extractPromptSections(readText(manifestFile));
+			goal = legacy.goal;
+			constraints = legacy.constraints;
+			approach = legacy.approach;
+		}
 
 		const sections: PlanSections = {
 			title,
@@ -402,12 +438,13 @@ function parsePromptOptimization(
 }
 
 /**
- * Split a prompt-optimization file into its three fixed archive sections.
+ * Legacy single-file parser for prompt-optimization archives.
  *
- * Only the three fixed headings (`## 原始提问` / `## 澄清结论` / `## 优化后提示词`)
- * act as field boundaries. The final section (`优化后提示词`) runs to EOF so the
- * structured prompt's own H2 sub-headings (`## 目标` / `## 上下文` / ...) are kept
- * intact instead of being misread as the next top-level field.
+ * New archives store each field in its own file (see `parsePromptOptimization`);
+ * this helper only back-fills archives still using the old single-file layout.
+ * It splits on the first occurrence of each fixed heading, so it is inherently
+ * ambiguous when the original question itself contains `## 澄清结论` or
+ * `## 优化后提示词` — exactly why the single-file layout was retired.
  */
 function extractPromptSections(content: string): { goal: string; constraints: string; approach: string } {
 	const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -448,6 +485,8 @@ export function getPlanMtime(planPath: string): number {
 	const responseFile = path.join(planPath, "RESPONSE.md");
 	const summaryFile = path.join(planPath, "SUMMARY.md");
 	const promptOptFile = path.join(planPath, "PROMPT-OPTIMIZATION.md");
+	const promptClarificationFile = path.join(planPath, "CLARIFICATION.md");
+	const promptOptimizedFile = path.join(planPath, "OPTIMIZED.md");
 
 	let mtime = 0;
 	if (fs.existsSync(planFile)) {
@@ -476,6 +515,12 @@ export function getPlanMtime(planPath: string): number {
 	}
 	if (fs.existsSync(promptOptFile)) {
 		mtime = Math.max(mtime, fs.statSync(promptOptFile).mtimeMs);
+	}
+	if (fs.existsSync(promptClarificationFile)) {
+		mtime = Math.max(mtime, fs.statSync(promptClarificationFile).mtimeMs);
+	}
+	if (fs.existsSync(promptOptimizedFile)) {
+		mtime = Math.max(mtime, fs.statSync(promptOptimizedFile).mtimeMs);
 	}
 	return mtime;
 }
