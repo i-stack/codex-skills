@@ -42,7 +42,7 @@ usage() {
 Usage:
   ./scripts/sync-skills.sh [options]
 
-Syncs SKILL.md + references/ + scripts/ + i18n/ for each skill under skills-engineering/ to local
+Syncs SKILL.md + references/ + i18n/ for each skill under skills-engineering/ to local
 Agent skill directories (Codex, Claude, Cursor, Xcode paths).
 
 Options:
@@ -183,8 +183,6 @@ sync_one_skill_to_target() {
     --include "/AGENT-BRIEF.md" \
     --include "/OUT-OF-SCOPE.md" \
     --include "/references/" --include "/references/**" \
-    --exclude "/scripts/**/__pycache__/" --exclude "*.pyc" \
-    --include "/scripts/" --include "/scripts/**" \
     --include "/i18n/" --include "/i18n/**" \
     --exclude "*")
   if [[ "${DRY_RUN}" == "true" ]]; then

@@ -76,10 +76,10 @@ Let users "confirm / refute / skip" rather than thinking from scratch. Recommend
 After the decision tree is resolved and consensus is reached, treat the current project or workspace root as `<workspace-root>` and persist the plan as follows:
 
 1. Generate a stable, semantic kebab-case `<plan-slug>` for this plan; reuse it throughout the grilling session and subsequent `cross-model-review` work.
-2. Pass the complete plan body to this skill's `scripts/write_plan.py`. Prefer `--input <draft-file>`; standard input is also supported: `python3 <skill-dir>/scripts/write_plan.py --workspace-root <workspace-root> --slug <plan-slug>`.
-3. Treat the script exit status as the persistence postcondition. The script creates parent directories, writes atomically, reads the file back, validates its location and seven sections, and prints the absolute `PLAN.md` path on success.
-4. The plan is "locked" only when the script exits zero and prints `<workspace-root>/.plan-reviews/<plan-slug>/PLAN.md`. Rendering Markdown in chat, creating only the directory, or bypassing the script does not complete PG-004.
-5. If the script cannot run, the workspace is read-only, authorization is denied, or the script exits nonzero, report the target path and error and keep the state "not locked".
+2. Use an available filesystem write tool to create `<workspace-root>/.plan-reviews/<plan-slug>/`, including missing parent directories. Merely rendering the Markdown in the conversation does not count as persistence.
+3. Write the plan to `<workspace-root>/.plan-reviews/<plan-slug>/PLAN.md`. Do not write `PLAN.md` at the workspace root or into the skill repository or another project.
+4. Before replying, read the target file back and verify that it exists under the current workspace root and that all seven second-level sections below exist with substantive content. The plan is "locked" only after both writing and verification succeed.
+5. If filesystem tools are unavailable, the workspace is read-only, required authorization is denied, or verification fails, report the target path and failure reason and keep the state "not locked". Never render the plan only in chat and then claim it was written or locked.
 
 `PLAN.md` format:
 
@@ -174,8 +174,8 @@ Before grilling ends, go through:
 - [ ] Did every question get a recommended answer + reasoning?
 - [ ] Were there questions that could have been answered by checking code but asked the user instead? (Should change to checking code)
 - [ ] Does the decision tree still have unresolved leaves?
-- [ ] Was `scripts/write_plan.py` invoked successfully, returning `.plan-reviews/<plan-slug>/PLAN.md` under the current workspace root?
-- [ ] If the script could not run or exited nonzero, was the plan kept "not locked" with the target path and error reported?
+- [ ] Was `.plan-reviews/<plan-slug>/PLAN.md` written with a filesystem tool and read back, confirming that it is under the current workspace root with all seven sections filled substantively and no placeholders?
+- [ ] If writing or read-back verification failed, was the plan kept "not locked" with the target path and failure reason reported?
 - [ ] Are blocking open questions cleared? Are non-blocking risks recorded?
 - [ ] When cross-file dependency analysis is involved, has platform engineer been delegated to produce architecture-analysis.md? (PG-005)
 
