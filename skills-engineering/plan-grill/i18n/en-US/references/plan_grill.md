@@ -73,7 +73,13 @@ Let users "confirm / refute / skip" rather than thinking from scratch. Recommend
 
 ### PG-004 Lock Output
 
-After decision tree is parsed and consensus reached with user, write to `PLAN.md`:
+After the decision tree is resolved and consensus is reached, treat the current project or workspace root as `<workspace-root>` and persist the plan as follows:
+
+1. Generate a stable, semantic kebab-case `<plan-slug>` for this plan; reuse it throughout the grilling session and subsequent `cross-model-review` work.
+2. Create `<workspace-root>/.plan-reviews/<plan-slug>/`, including missing parent directories.
+3. Write the plan to `<workspace-root>/.plan-reviews/<plan-slug>/PLAN.md`. Do not write `PLAN.md` at the workspace root or into the skill repository or another project.
+
+`PLAN.md` format:
 
 ```markdown
 # Plan: <one-sentence title>
@@ -103,7 +109,7 @@ After decision tree is parsed and consensus reached with user, write to `PLAN.md
 - <Things explicitly not done>
 ```
 
-After writing, inform user: "PLAN.md is locked. For adversarial cross-model review, relay to `cross-model-review`."
+After writing, report the actual relative path: "`.plan-reviews/<plan-slug>/PLAN.md` is locked. For adversarial cross-model review, relay to `cross-model-review`."
 
 ### PG-005 Architecture Analysis Delegation
 
@@ -166,7 +172,7 @@ Before grilling ends, go through:
 - [ ] Did every question get a recommended answer + reasoning?
 - [ ] Were there questions that could have been answered by checking code but asked the user instead? (Should change to checking code)
 - [ ] Does the decision tree still have unresolved leaves?
-- [ ] Are all seven PLAN.md sections filled substantively, no placeholders?
+- [ ] Was `.plan-reviews/<plan-slug>/PLAN.md` created under the current workspace root with all seven sections filled substantively and no placeholders?
 - [ ] Are blocking open questions cleared? Are non-blocking risks recorded?
 - [ ] When cross-file dependency analysis is involved, has platform engineer been delegated to produce architecture-analysis.md? (PG-005)
 

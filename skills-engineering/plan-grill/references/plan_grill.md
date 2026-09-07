@@ -70,7 +70,13 @@ Q: <问题>
 
 ### PG-004 锁定产出
 
-决策树解析完且与用户达成共识后，写入 `PLAN.md`：
+决策树解析完且与用户达成共识后，以当前项目或工作区的根目录为 `<工作区根>`，执行以下落盘动作：
+
+1. 为本轮计划生成稳定、语义化的短横线 `<plan-slug>`；同一轮盘问及后续 `cross-model-review` 必须复用该 slug。
+2. 创建 `<工作区根>/.plan-reviews/<plan-slug>/`（父目录不存在时一并创建）。
+3. 将计划写入 `<工作区根>/.plan-reviews/<plan-slug>/PLAN.md`，不得写到工作区根的 `PLAN.md`，也不得写到 skill 仓库或其它项目目录。
+
+`PLAN.md` 内容格式：
 
 ```markdown
 # Plan: <一句话标题>
@@ -100,7 +106,7 @@ Q: <问题>
 - <明确不做的事>
 ```
 
-写入后告知用户：「PLAN.md 已锁定。如需跨模型对抗审查，接力 `cross-model-review`。」
+写入后告知用户实际相对路径：「`.plan-reviews/<plan-slug>/PLAN.md` 已锁定。如需跨模型对抗审查，接力 `cross-model-review`。」
 
 ### PG-005 架构分析委托
 
@@ -163,7 +169,7 @@ PG-003 探索代码库时，若涉及**跨文件/跨模块依赖分析**（如�
 - [ ] 是否每个问题都给了推荐答案 + 理由？
 - [ ] 是否有本可查代码却问了用户的问题？（应改为查代码）
 - [ ] 决策树是否还有未决叶子？
-- [ ] PLAN.md 七段是否都填实，无占位符？
+- [ ] `.plan-reviews/<plan-slug>/PLAN.md` 是否已在当前工作区根下创建，且七段填实、无占位符？
 - [ ] blocking open questions 是否已清空？non-blocking risks 是否已记录？
 - [ ] 涉及跨文件依赖分析时，是否已委托平台 engineer 产出 architecture-analysis.md？（PG-005）
 
